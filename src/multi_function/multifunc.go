@@ -7,7 +7,7 @@ import (
 func main() {
 	fmt.Println("color")
 
-	result := sum(2, 5) //values to pass to "sum"
+	result := sum(2, 5) //values to pass to "sum" - in this ecample, as x, y
 	fmt.Println(result)
 }
 
