@@ -29,19 +29,19 @@ var photoExtensions = map[string]bool{
 }
 
 var videoExtensions = map[string]bool{
-	".mp4":  true,
-	".avi":  true,
-	".mov":  true,
-	".mkv":  true,
-	".flv":  true,
-	".wmv":  true,
-	".m4v":  true,
+	".mp4": true,
+	".avi": true,
+	".mov": true,
+	".mkv": true,
+	".flv": true,
+	".wmv": true,
+	".m4v": true,
 }
 
 var wg sync.WaitGroup
 var mu sync.Mutex
 var counter, totalFiles int
-var semaphore = make(chan struct{}, 2) // limit to 2 goroutines at once
+var semaphore = make(chan struct{}, 2)
 
 func isPhotoOrVideo(filename string) bool {
 	ext := strings.ToLower(filepath.Ext(filename))
@@ -77,7 +77,12 @@ func getDateTaken(path string) (int, int, error) {
 		}
 
 		dateStr := strings.TrimSpace(out.String())
-		dt, err := time.Parse("2006:01:02 15:04:05", strings.Split(dateStr, ": ")[1])
+		parts := strings.Split(dateStr, ": ")
+		if len(parts) < 2 {
+			return 0, 0, fmt.Errorf("Unexpected exiftool output format: %s", dateStr)
+		}
+
+		dt, err := time.Parse("2006:01:02 15:04:05", parts[1])
 		if err != nil {
 			return 0, 0, err
 		}
@@ -86,7 +91,6 @@ func getDateTaken(path string) (int, int, error) {
 
 	return 0, 0, fmt.Errorf("Unsupported file extension: %s", ext)
 }
-
 func processFile(path string) {
 	defer wg.Done()
 	defer func() {
@@ -141,7 +145,7 @@ func main() {
 	fmt.Println("\nCo-coded with ChatGPT from OpenAI! 🚀")
 	fmt.Println("\nLet's get started!")
 	fmt.Println("---------------------------------------------\n")
-	
+
 	fmt.Println("Which folder would you like to sort?")
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Scan()
