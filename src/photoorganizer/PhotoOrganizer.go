@@ -101,6 +101,28 @@ func processFile(path string) {
 		year, month, err := getDateTaken(path)
 		if err != nil {
 			fmt.Printf("Failed to get date taken for %s: %s\n", path, err)
+			// Move file to "undated" directory if there's an error
+			dstDir := filepath.Join("./media", "undated")
+			if filepath.Dir(path) == dstDir {
+				fmt.Printf("%s is already in the undated location\n", path)
+				return
+			}
+
+			if err := os.MkdirAll(dstDir, os.ModePerm); err != nil {
+				fmt.Printf("Failed to create directory %s: %s\n", dstDir, err)
+				return
+			}
+
+			dstPath := filepath.Join(dstDir, filepath.Base(path))
+			if err := os.Rename(path, dstPath); err != nil {
+				fmt.Printf("Failed to move %s to %s: %s\n", path, dstPath, err)
+				return
+			} else {
+				mu.Lock()
+				counter++
+				printProgress(counter, totalFiles)
+				mu.Unlock()
+			}
 			return
 		}
 
