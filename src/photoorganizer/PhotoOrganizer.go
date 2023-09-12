@@ -10,8 +10,7 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/rwcarlsen/goexif/exif"
+	//"github.com/rwcarlsen/goexif/exif"
 )
 
 var photoExtensions = map[string]bool{
@@ -49,48 +48,26 @@ func isPhotoOrVideo(filename string) bool {
 }
 
 func getDateTaken(path string) (int, int, error) {
-	ext := strings.ToLower(filepath.Ext(path))
-	if photoExtensions[ext] {
-		file, err := os.Open(path)
-		if err != nil {
-			return 0, 0, err
-		}
-		defer file.Close()
+	cmd := exec.Command("exiftool", "-DateTimeOriginal", path)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		return 0, 0, err
+	}
 
-		x, err := exif.Decode(file)
-		if err != nil {
-			return 0, 0, err
-		}
-
-		dt, err := x.DateTime()
-		if err != nil {
-			return 0, 0, err
-		}
-		return dt.Year(), int(dt.Month()), nil
-	} else if videoExtensions[ext] {
-		cmd := exec.Command("exiftool", "-DateTimeOriginal", path)
-		var out bytes.Buffer
-		cmd.Stdout = &out
-		err := cmd.Run()
-		if err != nil {
-			return 0, 0, err
-		}
-
-		dateStr := strings.TrimSpace(out.String())
-		parts := strings.Split(dateStr, ": ")
-		if len(parts) < 2 {
-			return 0, 0, fmt.Errorf("Unexpected exiftool output format: %s", dateStr)
-		}
-
-		dt, err := time.Parse("2006:01:02 15:04:05", parts[1])
+	dateStr := strings.TrimSpace(out.String())
+	if strings.Contains(dateStr, ":") {
+		datePart := strings.Split(dateStr, ": ")[1]
+		dt, err := time.Parse("2006:01:02 15:04:05", datePart)
 		if err != nil {
 			return 0, 0, err
 		}
 		return dt.Year(), int(dt.Month()), nil
 	}
-
-	return 0, 0, fmt.Errorf("Unsupported file extension: %s", ext)
+	return 0, 0, fmt.Errorf("Failed to extract DateTimeOriginal for %s", path)
 }
+
 func processFile(path string) {
 	defer wg.Done()
 	defer func() {
