@@ -25,6 +25,7 @@ var photoExtensions = map[string]bool{
 	".orf":  true,
 	".dng":  true,
 	".arw":  true,
+	".srw":  true,
 }
 
 var videoExtensions = map[string]bool{
@@ -91,8 +92,8 @@ func processFile(path string) {
 			}
 
 			dstPath := filepath.Join(dstDir, filepath.Base(path))
-			if err := os.Rename(path, dstPath); err != nil {
-				fmt.Printf("Failed to move %s to %s: %s\n", path, dstPath, err)
+			if err := tryMoveFile(path, dstPath); err != nil {
+				fmt.Printf("Failed to move %s: %s\n", path, err)
 				return
 			} else {
 				mu.Lock()
@@ -115,8 +116,8 @@ func processFile(path string) {
 		}
 
 		dstPath := filepath.Join(dstDir, filepath.Base(path))
-		if err := os.Rename(path, dstPath); err != nil {
-			fmt.Printf("Failed to move %s to %s: %s\n", path, dstPath, err)
+		if err := tryMoveFile(path, dstPath); err != nil {
+			fmt.Printf("Failed to move %s: %s\n", path, err)
 			return
 		} else {
 			mu.Lock()
@@ -132,6 +133,29 @@ func printProgress(count, total int) {
 	progress := float64(count) / float64(total)
 	bars := int(progress * barLength)
 	fmt.Printf("\r[%s%s] %d/%d", strings.Repeat("=", bars), strings.Repeat(" ", barLength-bars), count, total)
+}
+
+func tryMoveFile(src, dst string) error {
+    originalDst := dst
+    counter := 1
+    for {
+        err := os.Rename(src, dst)
+        if err != nil {
+            if os.IsExist(err) {
+                // File already exists, try a new name
+                ext := filepath.Ext(originalDst)
+                name := strings.TrimSuffix(filepath.Base(originalDst), ext)
+                dst = filepath.Join(filepath.Dir(originalDst), fmt.Sprintf("%s_%d%s", name, counter, ext))
+                counter++
+            } else {
+                // Some other error
+                return err
+            }
+        } else {
+            // File moved successfully
+            return nil
+        }
+    }
 }
 
 func main() {
