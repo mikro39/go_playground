@@ -49,25 +49,30 @@ func isPhotoOrVideo(filename string) bool {
 }
 
 func getDateTaken(path string) (int, int, error) {
-	cmd := exec.Command("exiftool", "-DateTimeOriginal", path)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	err := cmd.Run()
-	if err != nil {
-		return 0, 0, err
-	}
+    cmd := exec.Command("exiftool", "-DateTimeOriginal", path)
+    var out bytes.Buffer
+    cmd.Stdout = &out
+    err := cmd.Run()
+    if err != nil {
+        return 0, 0, err
+    }
 
-	dateStr := strings.TrimSpace(out.String())
-	if strings.Contains(dateStr, ":") {
-		datePart := strings.Split(dateStr, ": ")[1]
-		dt, err := time.Parse("2006:01:02 15:04:05", datePart)
-		if err != nil {
-			return 0, 0, err
-		}
-		return dt.Year(), int(dt.Month()), nil
-	}
-	return 0, 0, fmt.Errorf("Failed to extract DateTimeOriginal for %s", path)
+    dateStr := strings.TrimSpace(out.String())
+    if strings.Contains(dateStr, ":") {
+        parts := strings.Split(dateStr, ": ")
+        if len(parts) < 2 {
+            return 0, 0, fmt.Errorf("DateTimeOriginal not found in %s", path)
+        }
+        datePart := parts[1]
+        dt, err := time.Parse("2006:01:02 15:04:05", datePart)
+        if err != nil {
+            return 0, 0, err
+        }
+        return dt.Year(), int(dt.Month()), nil
+    }
+    return 0, 0, fmt.Errorf("Failed to extract DateTimeOriginal for %s", path)
 }
+
 
 func processFile(path string) {
 	defer wg.Done()
